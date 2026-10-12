@@ -65,7 +65,7 @@ class MainActivity : ComponentActivity() {
             val manager = getSystemService(NotificationManager::class.java)
             val channel = NotificationChannel("absenku_reminders", "Pengingat AbsenKU", NotificationManager.IMPORTANCE_HIGH).apply {
                 description = "Pengingat jadwal pelajaran dan pengumuman AbsenKU"
-                setSound(android.provider.Settings.System.DEFAULT_NOTIFICATION_URI, null)
+                setSound(null, null)
                 enableVibration(true)
             }
             manager.createNotificationChannel(channel)
@@ -78,6 +78,33 @@ class MainActivity : ComponentActivity() {
 }
 
 class AbsenKuBridge(private val context: Context) {
+    @JavascriptInterface fun startMonitoring(teacher: String) {
+        val intent = Intent(context, AnnouncementService::class.java).apply {
+            action = AnnouncementService.ACTION_MONITOR
+            putExtra("teacher_name", teacher)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent) else context.startService(intent)
+    }
+
+    @JavascriptInterface fun stopMonitoring() {
+        val intent = Intent(context, AnnouncementService::class.java).apply {
+            action = AnnouncementService.ACTION_STOP_MONITOR
+        }
+        context.startService(intent)
+    }
+
+    @JavascriptInterface fun showNotification(title: String, body: String, tag: String) {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notification = androidx.core.app.NotificationCompat.Builder(context, "absenku_reminders")
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setAutoCancel(true)
+            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+            .build()
+        manager.notify(tag.hashCode(), notification)
+    }
+
     @JavascriptInterface fun speak(text: String, lang: String = "id-ID", rate: Float = 1.0f, pitch: Float = 1.0f) {
         val intent = Intent(context, AnnouncementService::class.java).apply {
             action = AnnouncementService.ACTION_SPEAK
